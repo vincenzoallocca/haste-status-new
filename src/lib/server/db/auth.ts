@@ -6,17 +6,85 @@ function generateId(): string {
 	return crypto.randomUUID();
 }
 
-async function hashPassword(password: string): Promise<string> {
-	const encoder = new TextEncoder();
-	const data = encoder.encode(password);
-	const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-	const hashArray = Array.from(new Uint8Array(hashBuffer));
-	return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
+const PBKDF2_ITERATIONS = 100000;
+const SALT_BYTES = 16;
+const KEY_BYTES = 32;
+
+function bufferToHex(buffer: ArrayBuffer | Uint8Array): string {
+	const bytes = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
+	return Array.from(bytes)
+		.map((b) => b.toString(16).padStart(2, '0'))
+		.join('');
 }
 
-async function verifyPassword(password: string, hash: string): Promise<boolean> {
-	const passwordHash = await hashPassword(password);
-	return passwordHash === hash;
+function hexToBuffer(hex: string): Uint8Array {
+	if (hex.length % 2 !== 0) return new Uint8Array(0);
+	const bytes = new Uint8Array(hex.length / 2);
+	for (let i = 0; i < bytes.length; i++) {
+		bytes[i] = parseInt(hex.substring(i * 2, i * 2 + 2), 16);
+	}
+	return bytes;
+}
+
+function timingSafeEqual(a: Uint8Array, b: Uint8Array): boolean {
+	if (a.length !== b.length) {
+		return false;
+	}
+	let result = 0;
+	for (let i = 0; i < a.length; i++) {
+		result |= a[i] ^ b[i];
+	}
+	return result === 0;
+}
+
+async function derivePbkdf2(password: string, salt: Uint8Array, iterations: number): Promise<Uint8Array> {
+	const encoder = new TextEncoder();
+	const keyMaterial = await crypto.subtle.importKey(
+		'raw',
+		encoder.encode(password),
+		{ name: 'PBKDF2' },
+		false,
+		['deriveBits']
+	);
+	const derivedBits = await crypto.subtle.deriveBits(
+		{
+			name: 'PBKDF2',
+			salt: salt as unknown as BufferSource,
+			iterations,
+			hash: 'SHA-256'
+		},
+		keyMaterial,
+		KEY_BYTES * 8
+	);
+	return new Uint8Array(derivedBits);
+}
+
+async function hashPassword(password: string): Promise<string> {
+	const salt = crypto.getRandomValues(new Uint8Array(SALT_BYTES));
+	const hash = await derivePbkdf2(password, salt, PBKDF2_ITERATIONS);
+	return `pbkdf2:${PBKDF2_ITERATIONS}:${bufferToHex(salt)}:${bufferToHex(hash)}`;
+}
+
+async function verifyPassword(password: string, storedHash: string): Promise<boolean> {
+	if (!storedHash) return false;
+
+	if (storedHash.startsWith('pbkdf2:')) {
+		const parts = storedHash.split(':');
+		if (parts.length !== 4) return false;
+		const iterations = parseInt(parts[1], 10);
+		const salt = hexToBuffer(parts[2]);
+		const expectedHash = hexToBuffer(parts[3]);
+
+		const actualHash = await derivePbkdf2(password, salt, iterations);
+		return timingSafeEqual(actualHash, expectedHash);
+	}
+
+	// Legacy fallback: plain SHA-256 with timing-safe comparison
+	const encoder = new TextEncoder();
+	const hashBuffer = await crypto.subtle.digest('SHA-256', encoder.encode(password));
+	const actualHash = new Uint8Array(hashBuffer);
+	const expectedHash = hexToBuffer(storedHash);
+	return timingSafeEqual(actualHash, expectedHash);
 }
 
 export async function isAppSetup(db: D1Database): Promise<boolean> {
@@ -142,6 +210,22 @@ export async function validateCredentials(
 
 	const isValid = await verifyPassword(password, user.password_hash);
 	if (!isValid) return null;
+
+	// Migrate legacy SHA-256 hash to PBKDF2 on successful login
+	// Use conditional update to prevent race condition: only migrate if stored hash still equals the legacy hash
+	if (!user.password_hash.startsWith('pbkdf2:')) {
+		try {
+			const newHash = await hashPassword(password);
+await db
+				.prepare("UPDATE users SET password_hash = ?, updated_at = datetime('now') WHERE id = ? AND password_hash = ?")
+				.bind(newHash, user.id, user.password_hash)
+				.run();
+			// If meta.changes === 0, another request already migrated the hash
+		} catch {
+			// Migration failure should not break login
+			console.warn('[Auth] Failed to migrate legacy password hash for user:', user.id);
+		}
+	}
 
 	// Update last login
 	await db
