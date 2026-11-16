@@ -24,28 +24,28 @@
 		{ bg: string; border: string; text: string; icon: string }
 	> = {
 		error: {
-			bg: 'bg-red-50',
-			border: 'border-red-200',
-			text: 'text-red-800',
-			icon: 'text-red-400'
+			bg: 'bg-[#160d0d]',
+			border: 'border-[#d4200a]/40',
+			text: 'text-[#ff5a3d]',
+			icon: 'text-[#d4200a]'
 		},
 		success: {
-			bg: 'bg-green-50',
-			border: 'border-green-200',
-			text: 'text-green-800',
-			icon: 'text-green-400'
+			bg: 'bg-[#121212]',
+			border: 'border-white/20',
+			text: 'text-[#f2f0eb]',
+			icon: 'text-[#f2f0eb]'
 		},
 		warning: {
-			bg: 'bg-yellow-50',
-			border: 'border-yellow-200',
-			text: 'text-yellow-800',
-			icon: 'text-yellow-400'
+			bg: 'bg-[#18120c]',
+			border: 'border-[#ff5a3d]/30',
+			text: 'text-[#ff5a3d]',
+			icon: 'text-[#ff5a3d]'
 		},
 		info: {
-			bg: 'bg-blue-50',
-			border: 'border-blue-200',
-			text: 'text-blue-800',
-			icon: 'text-blue-400'
+			bg: 'bg-[#121212]',
+			border: 'border-white/15',
+			text: 'text-[#f2f0eb]',
+			icon: 'text-neutral-400'
 		}
 	};
 
@@ -74,12 +74,12 @@
 					></path>
 				</svg>
 			</div>
-			<div class="ml-3 flex-1">
+			<div class="ml-3 flex-1 font-mono text-xs">
 				{#if title}
-					<h3 class="text-sm font-medium {styles.text}">{title}</h3>
+					<h3 class="font-medium {styles.text}">{title}</h3>
 				{/if}
 				{#if children}
-					<div class="text-sm {styles.text}" class:mt-1={!!title}>
+					<div class="{styles.text}" class:mt-1={!!title}>
 						{@render children()}
 					</div>
 				{/if}
@@ -87,7 +87,7 @@
 			{#if dismissible}
 				<button
 					type="button"
-					class="ml-3 inline-flex rounded-md p-1.5 {styles.text} hover:bg-white/50 focus:outline-none focus:ring-2 focus:ring-offset-2"
+					class="ml-3 inline-flex rounded-md p-1.5 {styles.text} hover:bg-white/10 focus:outline-none"
 					onclick={handleDismiss}
 					aria-label="Dismiss"
 				>

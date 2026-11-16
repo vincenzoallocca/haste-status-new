@@ -1,20 +1,27 @@
-name = "pingflare"
+name = "haste-status"
 main = "dist/_worker.js"
 compatibility_date = "2025-11-17"
 compatibility_flags = ["nodejs_compat"]
 
+# Custom domain configuration for haste.it
+routes = [
+  { pattern = "status.haste.it", custom_domain = true }
+]
+
 # Workers Static Assets
 [assets]
 directory = "dist"
+binding = "ASSETS"
 
 # D1 Database binding
 [[d1_databases]]
 binding = "DB"
-database_name = "pingflare-db"
-database_id = "ba9bdc5e-7f72-42b8-9d69-8b8a17bd2cdb"
+database_name = "haste-status-db"
+database_id = "413dd6a3-7ff0-4564-a78e-cc8070b45b81"
 migrations_dir = "migrations"
 
-# Cron triggers - runs health checks every minute
+# Cron triggers
+# - Single trigger: health checks every minute, daily cleanup at 03:00 UTC (idempotent)
 [triggers]
 crons = ["*/1 * * * *"]
 
@@ -22,6 +29,7 @@ crons = ["*/1 * * * *"]
 [vars]
 ENVIRONMENT = "production"
 
-# Required secrets (set via `wrangler secret put`):
-# - CRON_SECRET: Random string to authenticate scheduled health checks
-#   Generate with: openssl rand -hex 32
+# Tracking IDs (set via `wrangler secret put`):
+# VITE_GA4_ID = "G-XXXXXXXXXX"        # Google Analytics 4 Measurement ID
+# VITE_CLARITY_ID = "xxxxxxxxxx"       # Microsoft Clarity Project ID
+# VITE_META_PIXEL_ID = "xxxxxxxxxxxxx" # Meta Pixel (Facebook) ID

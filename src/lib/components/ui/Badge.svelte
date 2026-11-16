@@ -29,11 +29,11 @@
 	const resolvedVariant = $derived(status ? statusToVariant[status] : variant);
 
 	const variantStyles: Record<BadgeVariant, string> = {
-		success: 'bg-green-100 text-green-800',
-		error: 'bg-red-100 text-red-800',
-		warning: 'bg-yellow-100 text-yellow-800',
-		info: 'bg-blue-100 text-blue-800',
-		neutral: 'bg-gray-100 text-gray-800'
+		success: 'bg-white/10 text-[#f2f0eb] border border-white/20',
+		error: 'bg-[#d4200a]/15 text-[#ff5a3d] border border-[#d4200a]/30',
+		warning: 'bg-[#ff5a3d]/10 text-[#ff5a3d] border border-[#ff5a3d]/20',
+		info: 'bg-white/5 text-[#f2f0eb] border border-white/10',
+		neutral: 'bg-white/5 text-neutral-400 border border-white/10'
 	};
 
 	const sizeStyles: Record<BadgeSize, string> = {
@@ -43,16 +43,16 @@
 	};
 
 	const computedStyles = $derived(
-		`inline-flex items-center font-medium rounded-full ${variantStyles[resolvedVariant]} ${sizeStyles[size]} ${className}`
+		`inline-flex items-center font-mono font-medium rounded ${variantStyles[resolvedVariant]} ${sizeStyles[size]} ${className}`
 	);
 </script>
 
 <span class={computedStyles}>
 	{#if status}
-		{status.charAt(0).toUpperCase() + status.slice(1)}
+		{status.toUpperCase()}
 	{:else if children}
 		{@render children()}
 	{:else}
-		Unknown
+		UNKNOWN
 	{/if}
 </span>

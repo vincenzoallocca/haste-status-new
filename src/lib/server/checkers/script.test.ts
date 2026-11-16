@@ -1,4 +1,4 @@
-import { describe, it, expect, mock } from 'bun:test';
+import { describe, it, expect, vi } from 'vitest';
 import { validateScript, executeScript } from './script';
 
 describe('validateScript', () => {
@@ -198,7 +198,7 @@ describe('validateScript', () => {
 describe('executeScript', () => {
 	it('should return down status when assertion with severity=down fails', async () => {
 		const originalFetch = globalThis.fetch;
-		globalThis.fetch = mock(() =>
+		globalThis.fetch = vi.fn(() =>
 			Promise.resolve(
 				new Response(JSON.stringify({ healthy: true }), {
 					status: 500,
@@ -230,7 +230,7 @@ describe('executeScript', () => {
 
 	it('should return degraded status when assertion with default severity fails', async () => {
 		const originalFetch = globalThis.fetch;
-		globalThis.fetch = mock(() =>
+		globalThis.fetch = vi.fn(() =>
 			Promise.resolve(
 				new Response(JSON.stringify({ healthy: false }), {
 					status: 200,
@@ -261,7 +261,7 @@ describe('executeScript', () => {
 
 	it('should return degraded status when assertion with severity=degraded fails', async () => {
 		const originalFetch = globalThis.fetch;
-		globalThis.fetch = mock(() =>
+		globalThis.fetch = vi.fn(() =>
 			Promise.resolve(
 				new Response(JSON.stringify({ count: 5 }), {
 					status: 200,
@@ -292,7 +292,7 @@ describe('executeScript', () => {
 
 	it('should allow responseTime assertion', async () => {
 		const originalFetch = globalThis.fetch;
-		globalThis.fetch = mock(() =>
+		globalThis.fetch = vi.fn(() =>
 			Promise.resolve(
 				new Response('OK', {
 					status: 200
@@ -323,7 +323,7 @@ describe('executeScript', () => {
 
 	it('should return down when both down and degraded severity assertions fail', async () => {
 		const originalFetch = globalThis.fetch;
-		globalThis.fetch = mock(() =>
+		globalThis.fetch = vi.fn(() =>
 			Promise.resolve(
 				new Response(JSON.stringify({ healthy: false }), {
 					status: 500,
@@ -357,7 +357,7 @@ describe('executeScript', () => {
 
 	it('should return up when all assertions pass', async () => {
 		const originalFetch = globalThis.fetch;
-		globalThis.fetch = mock(() =>
+		globalThis.fetch = vi.fn(() =>
 			Promise.resolve(
 				new Response(JSON.stringify({ healthy: true }), {
 					status: 200,

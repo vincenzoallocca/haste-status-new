@@ -150,6 +150,7 @@
 					type="button"
 					onclick={onClose}
 					class="rounded-md p-1 text-gray-400 hover:text-gray-600"
+					aria-label="Close"
 				>
 					<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 						<path

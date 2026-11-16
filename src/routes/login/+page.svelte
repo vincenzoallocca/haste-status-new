@@ -1,8 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { Container } from '$lib/components/layout';
-	import { Card, Input, Button, Alert } from '$lib/components/ui';
 
 	let email = $state('');
 	let password = $state('');
@@ -14,7 +12,7 @@
 		error = '';
 
 		if (!email || !password) {
-			error = 'Email and password are required';
+			error = 'Email e password sono obbligatorie';
 			return;
 		}
 
@@ -30,13 +28,13 @@
 			const data = (await response.json()) as { error?: string };
 
 			if (!response.ok) {
-				error = data.error || 'Login failed';
+				error = data.error || 'Autenticazione fallita';
 				return;
 			}
 
 			await goto(resolve('/'));
 		} catch {
-			error = 'An error occurred. Please try again.';
+			error = 'Si è verificato un errore di connessione. Riprova.';
 		} finally {
 			isSubmitting = false;
 		}
@@ -44,58 +42,74 @@
 </script>
 
 <svelte:head>
-	<title>Login - Pingflare</title>
+	<title>Staff Login — HASTE Status</title>
 </svelte:head>
 
-<div class="flex min-h-screen items-center justify-center bg-gray-50 px-4 py-12">
-	<Container size="sm">
+<div class="flex min-h-screen items-center justify-center bg-[#0a0a0a] px-4 py-12 text-[#f2f0eb]">
+	<div class="w-full max-w-md">
+		<!-- Header with HASTE logo -->
 		<div class="text-center">
-			<div
-				class="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-blue-600 text-white"
-			>
-				<svg class="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-					<path
-						stroke-linecap="round"
-						stroke-linejoin="round"
-						stroke-width="2"
-						d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-					></path>
-				</svg>
-			</div>
-			<h1 class="mt-4 text-2xl font-bold text-gray-900">Pingflare</h1>
-			<p class="mt-1 text-gray-600">Sign in to your account</p>
+			<a href="https://haste.it" target="_blank" rel="noopener noreferrer" class="inline-block transition hover:opacity-85">
+				<img src="/logo.svg" alt="HASTE" class="mx-auto h-8 w-auto" />
+			</a>
+			<h1 class="mt-6 text-xl font-bold tracking-tight text-white">HASTE Status Portal</h1>
+			<p class="mt-1 font-mono text-xs text-neutral-400">Accesso amministrazione e monitoraggio</p>
 		</div>
 
-		<Card class="mt-8" padding="lg">
+		<!-- Login Card -->
+		<div class="mt-8 rounded-2xl border border-white/10 bg-[#121212] p-8 shadow-2xl">
 			{#if error}
-				<div class="mb-4">
-					<Alert variant="error">{error}</Alert>
+				<div class="mb-5 rounded-lg border border-[#d4200a]/40 bg-[#1e0e0e] p-3 text-xs font-mono text-red-300">
+					{error}
 				</div>
 			{/if}
 
-			<form onsubmit={handleSubmit} class="space-y-4">
-				<Input
-					type="email"
-					name="email"
-					label="Email"
-					placeholder="you@example.com"
-					bind:value={email}
-					required
-				/>
+			<form onsubmit={handleSubmit} class="space-y-5">
+				<div>
+					<label for="email" class="block font-mono text-xs font-medium uppercase tracking-wider text-neutral-400">
+						Email
+					</label>
+					<input
+						type="email"
+						id="email"
+						name="email"
+						placeholder="admin@haste.it"
+						bind:value={email}
+						required
+						class="mt-1.5 w-full rounded-lg border border-white/15 bg-[#181818] px-3.5 py-2.5 font-mono text-sm text-white placeholder-neutral-500 transition focus:border-[#d4200a] focus:outline-none focus:ring-1 focus:ring-[#d4200a]"
+					/>
+				</div>
 
-				<Input
-					type="password"
-					name="password"
-					label="Password"
-					placeholder="Enter your password"
-					bind:value={password}
-					required
-				/>
+				<div>
+					<label for="password" class="block font-mono text-xs font-medium uppercase tracking-wider text-neutral-400">
+						Password
+					</label>
+					<input
+						type="password"
+						id="password"
+						name="password"
+						placeholder="••••••••••••"
+						bind:value={password}
+						required
+						class="mt-1.5 w-full rounded-lg border border-white/15 bg-[#181818] px-3.5 py-2.5 font-mono text-sm text-white placeholder-neutral-500 transition focus:border-[#d4200a] focus:outline-none focus:ring-1 focus:ring-[#d4200a]"
+					/>
+				</div>
 
-				<Button type="submit" loading={isSubmitting} class="w-full">
-					{isSubmitting ? 'Signing in...' : 'Sign in'}
-				</Button>
+				<button
+					type="submit"
+					disabled={isSubmitting}
+					class="w-full rounded-lg bg-[#d4200a] py-2.5 font-mono text-xs font-bold uppercase tracking-wider text-white shadow-lg transition hover:bg-[#b01a07] disabled:opacity-50"
+				>
+					{isSubmitting ? 'Accesso in corso...' : 'Accedi al Pannello'}
+				</button>
 			</form>
-		</Card>
-	</Container>
+		</div>
+
+		<!-- Back Link -->
+		<div class="mt-6 text-center">
+			<a href="/status" class="font-mono text-xs text-neutral-500 hover:text-white transition">
+				&larr; Torna alla Status Page Pubblica
+			</a>
+		</div>
+	</div>
 </div>

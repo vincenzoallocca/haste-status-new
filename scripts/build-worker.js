@@ -124,6 +124,9 @@ export default {
 	// Cleanup wrapper file
 	rmSync(WRAPPER_FILE, { force: true });
 
+	// Create .assetsignore so Cloudflare Workers Static Assets does not upload _worker.js as a public asset
+	writeFileSync(join(DIST_DIR, '.assetsignore'), '_worker.js\n');
+
 	console.log('[build-worker] Build complete!');
 	console.log('[build-worker] Output: dist/_worker.js + static assets');
 }

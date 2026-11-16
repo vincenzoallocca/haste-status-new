@@ -176,7 +176,7 @@
 		</Button>
 	{:else if pushState === 'enabled'}
 		<div class="flex items-center gap-3">
-			<span class="flex items-center gap-1.5 text-sm text-green-600">
+			<span class="flex items-center gap-1.5 text-sm text-[#f2f0eb]">
 				<svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
 					<path
 						fill-rule="evenodd"

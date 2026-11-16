@@ -1,133 +1,126 @@
 <script lang="ts">
 	import type { PageData } from './$types';
-	import { getOverallStatusText, getOverallStatusColor } from '$lib/types/status';
 	import PublicLayout from '$lib/components/layout/PublicLayout.svelte';
 	import UptimeBars from '$lib/components/UptimeBars.svelte';
 
 	let { data }: { data: PageData } = $props();
 
-	const statusText = $derived(getOverallStatusText(data.group.overall_status));
-	const statusColor = $derived(getOverallStatusColor(data.group.overall_status));
+	const isOperational = $derived(data.group ? data.group.overall_status === 'operational' : false);
 
 	function formatIncidentTime(dateStr: string): string {
 		const date = new Date(dateStr);
-		return date.toLocaleDateString('en-US', {
+		return date.toLocaleDateString('it-IT', {
 			month: 'short',
 			day: 'numeric',
 			hour: '2-digit',
-			minute: '2-digit',
-			timeZoneName: 'short'
+			minute: '2-digit'
 		});
 	}
 
 	function getStatusLabel(status: string): string {
-		return status.charAt(0).toUpperCase() + status.slice(1);
+		switch (status) {
+			case 'investigating': return 'Indagine in corso';
+			case 'identified': return 'Causa identificata';
+			case 'monitoring': return 'Sotto monitoraggio';
+			case 'resolved': return 'Risolto';
+			default: return status;
+		}
 	}
 </script>
 
 <svelte:head>
-	<title>{data.group.name} Status</title>
+	<title>{data.group?.name ?? 'Gruppo'} — HASTE Status</title>
 </svelte:head>
 
 <PublicLayout>
 	<!-- Back link -->
 	<a
 		href="/status"
-		class="mb-4 inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700"
+		class="mb-6 inline-flex items-center gap-1.5 font-mono text-xs text-neutral-400 hover:text-white transition"
 	>
 		<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 			<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
 		</svg>
-		Back to all groups
+		Torna a tutti i servizi
 	</a>
 
-	<!-- Group Status Banner -->
-	<div class="mb-8 rounded-lg p-6 text-white {statusColor}">
-		<h1 class="text-2xl font-bold">{data.group.name}</h1>
-		<p class="mt-1 text-lg opacity-90">{statusText}</p>
-		{#if data.group.description}
-			<p class="mt-2 text-sm opacity-75">{data.group.description}</p>
-		{/if}
-	</div>
-
-	<!-- Active Incidents -->
-	{#if data.activeIncidents.length > 0}
-		<div class="mb-8">
-			{#each data.activeIncidents as incident}
-				<div class="mb-4 rounded-lg border-l-4 border-orange-400 bg-orange-50 p-4">
-					<h3 class="font-semibold text-orange-700">{incident.title}</h3>
-					{#if incident.updates.length > 0}
-						<p class="mt-1 text-sm text-gray-600">
-							<span class="font-medium">{getStatusLabel(incident.updates[0].status)}</span> - {incident
-								.updates[0].message}
-						</p>
-						<p class="mt-1 text-xs text-gray-500">
-							{formatIncidentTime(incident.updates[0].created_at)}
-						</p>
+	{#if data.dbUnavailable || !data.group}
+		<div class="relative mb-10 overflow-hidden rounded-xl border border-white/10 bg-[#121212] p-8 sm:p-10 shadow-lg text-center">
+			<h1 class="text-xl font-bold tracking-tight text-[#f2f0eb] sm:text-2xl">Dati temporaneamente non disponibili</h1>
+			<p class="mt-2 text-sm text-neutral-400 font-mono">
+				Le informazioni di stato per questo gruppo sono momentaneamente non disponibili a causa delle quote di lettura del database.
+			</p>
+		</div>
+	{:else}
+		<!-- Group Status Banner -->
+		<div class="relative mb-10 overflow-hidden rounded-xl border {isOperational ? 'border-white/10 bg-[#121212]' : 'border-[#d4200a]/50 bg-[#160d0d]'} p-8 sm:p-10 shadow-lg">
+			<div class="flex items-center justify-between gap-4">
+				<div>
+					<h1 class="text-2xl font-bold tracking-tight text-[#f2f0eb] sm:text-3xl">{data.group.name}</h1>
+					<p class="mt-1 font-mono text-xs {isOperational ? 'text-neutral-400' : 'text-[#d4200a]'}">
+						{isOperational ? 'Tutti i monitor di questo gruppo sono operativi' : 'Uno o più monitor riscontrano anomalie'}
+					</p>
+					{#if data.group.description}
+						<p class="mt-3 text-xs font-mono text-neutral-400 max-w-2xl">{data.group.description}</p>
 					{/if}
 				</div>
-			{/each}
-		</div>
-	{/if}
-
-	<!-- Monitors with Uptime Bars -->
-	<div class="mb-8">
-		<div class="mb-4 flex items-center justify-between">
-			<h2 class="text-lg font-semibold text-gray-900">Monitors</h2>
-			<p class="text-sm text-gray-500">Uptime over the past 90 days</p>
-		</div>
-
-		{#if data.group.monitors.length > 0}
-			<div class="rounded-lg border border-gray-200 bg-white p-4">
-				<div class="divide-y divide-gray-100">
-					{#each data.group.monitors as monitor}
-						<div class="py-3 first:pt-0 last:pb-0">
-							<UptimeBars
-								name={monitor.name}
-								days={monitor.daily_status}
-								uptimePercent={monitor.uptime_90d}
-								currentStatus={monitor.current_status}
-							/>
-						</div>
-					{/each}
+				<div class="hidden sm:block">
+					<span class="inline-flex items-center gap-2 border border-white/15 bg-white/5 px-3 py-1 font-mono text-xs uppercase tracking-wider text-[#f2f0eb]">
+						<span class="inline-block h-[5px] w-[5px] {isOperational ? 'bg-[#d4200a]' : 'bg-[#d4200a] animate-ping'}"></span>
+						{isOperational ? 'Operativo' : 'Attenzione'}
+					</span>
 				</div>
 			</div>
-		{:else}
-			<div class="rounded-lg border border-gray-200 bg-white p-8 text-center text-gray-500">
-				No monitors in this group.
+		</div>
+
+		<!-- Active Incidents -->
+		{#if data.activeIncidents.length > 0}
+			<div class="mb-10 space-y-4">
+				<h2 class="text-xs font-mono font-semibold uppercase tracking-widest text-neutral-400">Incidenti attivi</h2>
+				{#each data.activeIncidents as incident (incident.id)}
+					<div class="rounded-xl border border-[#d4200a]/40 bg-[#160d0d] p-5">
+						<div class="flex items-center gap-2">
+							<span class="inline-block h-[5px] w-[5px] bg-[#d4200a]"></span>
+							<h3 class="font-semibold text-[#f2f0eb]">{incident.title}</h3>
+						</div>
+						{#if incident.updates.length > 0}
+							<p class="mt-2 text-sm font-mono text-neutral-300">
+								<span class="font-medium text-[#d4200a]">{getStatusLabel(incident.updates[0].status)}</span> — {incident.updates[0].message}
+							</p>
+							<p class="mt-2 text-xs font-mono text-neutral-500">
+								{formatIncidentTime(incident.updates[0].created_at)}
+							</p>
+						{/if}
+					</div>
+				{/each}
 			</div>
 		{/if}
-	</div>
 
-	<!-- Past Incidents -->
-	<div class="mt-12">
-		<h2 class="mb-6 text-2xl font-bold text-gray-900">Past Incidents</h2>
-
-		{#each data.pastIncidents as day}
-			<div class="mb-6">
-				<h3 class="border-b border-gray-200 pb-2 text-lg font-semibold text-gray-900">
-					{day.dateFormatted}
-				</h3>
-				{#if day.incidents.length === 0}
-					<p class="mt-2 text-sm text-gray-500">No incidents reported.</p>
-				{:else}
-					{#each day.incidents as incident}
-						<div class="mt-4">
-							<h4 class="text-lg font-medium text-orange-600">{incident.title}</h4>
-							<div class="mt-2 space-y-2">
-								{#each incident.updates as update}
-									<div>
-										<p class="text-sm text-gray-700">
-											<span class="font-semibold">{getStatusLabel(update.status)}</span> - {update.message}
-										</p>
-										<p class="text-xs text-gray-500">{formatIncidentTime(update.created_at)}</p>
-									</div>
-								{/each}
-							</div>
-						</div>
-					{/each}
-				{/if}
+		<!-- Monitors with Uptime Bars -->
+		<div class="mb-10">
+			<div class="mb-5 flex items-center justify-between">
+				<h2 class="text-xs font-mono font-semibold uppercase tracking-widest text-neutral-400">
+					Monitor Attivi
+				</h2>
+				<p class="text-xs font-mono text-neutral-500">Storico degli ultimi 90 giorni</p>
 			</div>
-		{/each}
-	</div>
+
+			{#if data.group.monitors.length > 0}
+				<div class="space-y-4">
+					{#each data.group.monitors as monitor (monitor.id)}
+						<UptimeBars
+							name={monitor.name}
+							days={monitor.daily_status}
+							uptimePercent={monitor.uptime_90d}
+							currentStatus={monitor.current_status}
+						/>
+					{/each}
+				</div>
+			{:else}
+				<div class="rounded-xl border border-white/10 bg-[#121212] p-12 text-center text-xs font-mono text-neutral-500">
+					Nessun monitor in questo gruppo.
+				</div>
+			{/if}
+		</div>
+	{/if}
 </PublicLayout>

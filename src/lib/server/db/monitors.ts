@@ -115,12 +115,14 @@ export async function insertCheck(
 	errorMessage: string | null,
 	checkedFrom: string | null
 ): Promise<void> {
+	const now = new Date().toISOString();
+	const checkDate = now.split('T')[0];
 	await db
 		.prepare(
-			`INSERT INTO checks (monitor_id, status, response_time_ms, status_code, error_message, checked_from)
-       VALUES (?, ?, ?, ?, ?, ?)`
+			`INSERT INTO checks (monitor_id, status, response_time_ms, status_code, error_message, checked_from, check_date)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`
 		)
-		.bind(monitorId, status, responseTimeMs, statusCode, errorMessage, checkedFrom)
+		.bind(monitorId, status, responseTimeMs, statusCode, errorMessage, checkedFrom, checkDate)
 		.run();
 }
 
@@ -146,23 +148,24 @@ export async function getLastCheck(db: D1Database, monitorId: string): Promise<C
 export async function getUptime24h(db: D1Database, monitorId: string): Promise<number> {
 	const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
-	const total = await db
-		.prepare('SELECT COUNT(*) as count FROM checks WHERE monitor_id = ? AND checked_at > ?')
-		.bind(monitorId, twentyFourHoursAgo)
-		.first<{ count: number }>();
-
-	const up = await db
+	const result = await db
 		.prepare(
-			"SELECT COUNT(*) as count FROM checks WHERE monitor_id = ? AND checked_at > ? AND status = 'up'"
+			`
+			SELECT
+				COUNT(*) as total,
+				SUM(CASE WHEN status = 'up' THEN 1 ELSE 0 END) as up
+			FROM checks
+			WHERE monitor_id = ? AND checked_at > ?
+		`
 		)
 		.bind(monitorId, twentyFourHoursAgo)
-		.first<{ count: number }>();
+		.first<{ total: number; up: number }>();
 
-	if (!total?.count || total.count === 0) {
+	if (!result?.total || result.total === 0) {
 		return 100;
 	}
 
-	return Math.round(((up?.count ?? 0) / total.count) * 10000) / 100;
+	return Math.round((result.up / result.total) * 10000) / 100;
 }
 
 export async function cleanupOldChecks(db: D1Database, retentionDays: number = 7): Promise<number> {

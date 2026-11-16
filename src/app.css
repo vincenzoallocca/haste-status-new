@@ -1,1 +1,128 @@
 @import 'tailwindcss';
+
+@font-face {
+    font-family: 'Roboto Flex';
+    src: url('/fonts/roboto-flex-wdth-wght.woff2') format('woff2');
+    font-weight: 100 1000;
+    font-stretch: 25% 151%;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Roboto Flex Fallback';
+    src: local('Arial'), local('Helvetica Neue'), local('Liberation Sans');
+    size-adjust: 99.2%;
+    ascent-override: 94%;
+    descent-override: 25%;
+    line-gap-override: 0%;
+}
+
+@font-face {
+    font-family: 'JetBrains Mono';
+    src: url('/fonts/jetbrains-mono-wght.woff2') format('woff2');
+    font-weight: 400 700;
+    font-style: normal;
+    font-display: swap;
+}
+
+:root {
+    --bg: #0a0a0a;
+    --card: #121212;
+    --border: rgba(242, 240, 235, 0.12);
+    --border-hi: rgba(242, 240, 235, 0.2);
+    --ink: #f2f0eb;
+    --ink-muted: rgba(242, 240, 235, 0.65);
+    --ink-faint: rgba(242, 240, 235, 0.4);
+    --red: #d4200a;
+    --red-accessible: #ff5a3d;
+
+    --font-sans: 'Roboto Flex', 'Roboto Flex Fallback', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+    /* HASTE width axis hierarchy */
+    --w-label: 40%;
+    --w-meta: 70%;
+    --w-body: 100%;
+    --w-section: 125%;
+    --w-voice: 151%;
+
+    font-family: var(--font-sans);
+}
+
+html, body {
+    background-color: #0a0a0a !important;
+    color: #f2f0eb !important;
+    font-family: 'Roboto Flex', 'Roboto Flex Fallback', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+    -webkit-font-smoothing: antialiased;
+    letter-spacing: -0.01em;
+}
+
+.font-mono {
+    font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace !important;
+}
+
+h1, h2, h3, h4, .font-heading {
+    font-family: 'Roboto Flex', 'Roboto Flex Fallback', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+    letter-spacing: -0.02em;
+}
+
+/* Global HASTE Theme Adapters */
+.bg-gray-50, .bg-gray-100 {
+    background-color: #0a0a0a !important;
+}
+
+.bg-white {
+    background-color: #121212 !important;
+    border-color: rgba(242, 240, 235, 0.12) !important;
+    color: #f2f0eb !important;
+}
+
+.border-gray-200, .border-gray-100, .border-gray-300 {
+    border-color: rgba(242, 240, 235, 0.12) !important;
+}
+
+.divide-gray-100 > :not([hidden]) ~ :not([hidden]),
+.divide-gray-200 > :not([hidden]) ~ :not([hidden]) {
+    border-color: rgba(242, 240, 235, 0.08) !important;
+}
+
+.text-gray-900, .text-gray-800, .text-gray-700 {
+    color: #f2f0eb !important;
+}
+
+.text-gray-600, .text-gray-500 {
+    color: rgba(242, 240, 235, 0.65) !important;
+}
+
+.text-gray-400 {
+    color: rgba(242, 240, 235, 0.4) !important;
+}
+
+/* Form controls */
+input, select, textarea {
+    background-color: #161616 !important;
+    border-color: rgba(242, 240, 235, 0.16) !important;
+    color: #f2f0eb !important;
+    font-family: var(--font-mono);
+}
+
+input:focus, select:focus, textarea:focus {
+    border-color: #d4200a !important;
+    outline: none !important;
+    box-shadow: 0 0 0 1px #d4200a !important;
+}
+
+/* Brand Buttons */
+.bg-blue-600 {
+    background-color: #d4200a !important;
+}
+.bg-blue-600:hover, .hover\:bg-blue-700:hover {
+    background-color: #b01a07 !important;
+}
+.text-blue-600 {
+    color: #d4200a !important;
+}
+.focus\:ring-blue-500:focus, .focus\:ring-blue-200:focus {
+    --tw-ring-color: #d4200a !important;
+}

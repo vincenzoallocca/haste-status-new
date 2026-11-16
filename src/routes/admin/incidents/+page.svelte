@@ -44,7 +44,7 @@
 			case 'monitoring':
 				return 'bg-blue-100 text-blue-700';
 			case 'resolved':
-				return 'bg-green-100 text-green-700';
+				return 'border border-white/20 bg-white/10 text-white';
 		}
 	}
 
@@ -208,7 +208,7 @@
 							class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
 							required
 						>
-							{#each data.groups as group}
+							{#each data.groups as group (group.id)}
 								<option value={group.id}>{group.name}</option>
 							{/each}
 						</select>
@@ -265,7 +265,7 @@
 			<div class="mb-8">
 				<h3 class="mb-4 text-lg font-semibold text-gray-900">Active Incidents</h3>
 				<div class="space-y-4">
-					{#each activeIncidents as incident}
+					{#each activeIncidents as incident (incident.id)}
 						<Card>
 							<div class="flex items-start justify-between">
 								<div class="flex-1">
@@ -303,8 +303,9 @@
 								<div class="mt-4 border-t border-gray-200 pt-4">
 									<div class="space-y-3">
 										<div>
-											<label class="block text-sm font-medium text-gray-700">New Status</label>
+											<label for="updateStatus-{incident.id}" class="block text-sm font-medium text-gray-700">New Status</label>
 											<select
+												id="updateStatus-{incident.id}"
 												bind:value={updateStatus}
 												class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
 											>
@@ -315,8 +316,9 @@
 											</select>
 										</div>
 										<div>
-											<label class="block text-sm font-medium text-gray-700">Update Message</label>
+											<label for="updateMessage-{incident.id}" class="block text-sm font-medium text-gray-700">Update Message</label>
 											<textarea
+												id="updateMessage-{incident.id}"
 												bind:value={updateMessage}
 												rows={2}
 												placeholder="What's the latest update?"
@@ -343,7 +345,7 @@
 							{#if incident.updates.length > 0}
 								<div class="mt-4 border-t border-gray-200 pt-4">
 									<div class="space-y-3">
-										{#each incident.updates as update}
+										{#each incident.updates as update (update.id)}
 											<div class="flex gap-3">
 												<div class="flex flex-col items-center">
 													<div
@@ -379,14 +381,14 @@
 			<div>
 				<h3 class="mb-4 text-lg font-semibold text-gray-900">Resolved Incidents</h3>
 				<div class="space-y-4">
-					{#each resolvedIncidents as incident}
+					{#each resolvedIncidents as incident (incident.id)}
 						<Card class="opacity-75">
 							<div class="flex items-start justify-between">
 								<div class="flex-1">
 									<div class="flex items-center gap-2">
 										<h4 class="font-semibold text-gray-700">{incident.title}</h4>
 										<span
-											class="rounded-full px-2 py-0.5 text-xs font-medium bg-green-100 text-green-700"
+											class="rounded-full px-2 py-0.5 text-xs font-medium border border-white/20 bg-white/10 text-white"
 										>
 											Resolved
 										</span>

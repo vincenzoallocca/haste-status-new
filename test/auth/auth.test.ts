@@ -31,8 +31,8 @@ describe('validateCredentials - PBKDF2 migration', () => {
 			.join('');
 
 		await rawDb(db).exec(`
-			INSERT INTO users (id, name, email, password_hash, role, created_at, updated_at)
-			VALUES ('${userId}', 'Test User', 'legacy@test.com', '${legacyHash}', 'admin', datetime('now'), datetime('now'))
+			INSERT INTO users (id, name, email, email_normalized, password_hash, role, created_at, updated_at)
+			VALUES ('${userId}', 'Test User', 'legacy@test.com', 'legacy@test.com', '${legacyHash}', 'admin', datetime('now'), datetime('now'))
 		`);
 
 		// Verify the hash is legacy format
@@ -67,8 +67,8 @@ describe('validateCredentials - PBKDF2 migration', () => {
 			.join('');
 
 		await rawDb(db).exec(`
-			INSERT INTO users (id, name, email, password_hash, role, created_at, updated_at)
-			VALUES ('${userId}', 'Test User', 'nomigrate@test.com', '${legacyHash}', 'admin', datetime('now'), datetime('now'))
+			INSERT INTO users (id, name, email, email_normalized, password_hash, role, created_at, updated_at)
+			VALUES ('${userId}', 'Test User', 'nomigrate@test.com', 'nomigrate@test.com', '${legacyHash}', 'admin', datetime('now'), datetime('now'))
 		`);
 
 		// Attempt login with wrong password
@@ -107,8 +107,8 @@ describe('validateCredentials - PBKDF2 migration', () => {
 		const userId = crypto.randomUUID();
 
 		await rawDb(db).exec(`
-			INSERT INTO users (id, name, email, password_hash, role, created_at, updated_at)
-			VALUES ('${userId}', 'PBKDF2 User', 'pbkdf2@test.com', '${pbkdf2Hash}', 'admin', datetime('now'), datetime('now'))
+			INSERT INTO users (id, name, email, email_normalized, password_hash, role, created_at, updated_at)
+			VALUES ('${userId}', 'PBKDF2 User', 'pbkdf2@test.com', 'pbkdf2@test.com', '${pbkdf2Hash}', 'admin', datetime('now'), datetime('now'))
 		`);
 
 		// Login with correct password
@@ -127,8 +127,8 @@ describe('validateCredentials - PBKDF2 migration', () => {
 		const malformedHash = 'not-a-valid-hex-string!';
 
 		await rawDb(db).exec(`
-			INSERT INTO users (id, name, email, password_hash, role, created_at, updated_at)
-			VALUES ('${userId}', 'Test User', 'malformed@test.com', '${malformedHash}', 'admin', datetime('now'), datetime('now'))
+			INSERT INTO users (id, name, email, email_normalized, password_hash, role, created_at, updated_at)
+			VALUES ('${userId}', 'Test User', 'malformed@test.com', 'malformed@test.com', '${malformedHash}', 'admin', datetime('now'), datetime('now'))
 		`);
 
 		const user = await validateCredentials(db, 'malformed@test.com', 'anypassword');
@@ -140,8 +140,8 @@ describe('validateCredentials - PBKDF2 migration', () => {
 		const malformedPbkdf2 = 'pbkdf2:invalid';
 
 		await rawDb(db).exec(`
-			INSERT INTO users (id, name, email, password_hash, role, created_at, updated_at)
-			VALUES ('${userId}', 'Test User', 'malformedpbkdf2@test.com', '${malformedPbkdf2}', 'admin', datetime('now'), datetime('now'))
+			INSERT INTO users (id, name, email, email_normalized, password_hash, role, created_at, updated_at)
+			VALUES ('${userId}', 'Test User', 'malformedpbkdf2@test.com', 'malformedpbkdf2@test.com', '${malformedPbkdf2}', 'admin', datetime('now'), datetime('now'))
 		`);
 
 		const user = await validateCredentials(db, 'malformedpbkdf2@test.com', 'anypassword');
@@ -158,8 +158,8 @@ describe('validateCredentials - PBKDF2 migration', () => {
 			.join('');
 
 		await rawDb(db).exec(`
-			INSERT INTO users (id, name, email, password_hash, role, created_at, updated_at)
-			VALUES ('${userId}', 'Test User', 'dbfail@test.com', '${legacyHash}', 'admin', datetime('now'), datetime('now'))
+			INSERT INTO users (id, name, email, email_normalized, password_hash, role, created_at, updated_at)
+			VALUES ('${userId}', 'Test User', 'dbfail@test.com', 'dbfail@test.com', '${legacyHash}', 'admin', datetime('now'), datetime('now'))
 		`);
 
 		// Mock db.prepare to throw on UPDATE (migration) but not on SELECT
@@ -191,8 +191,8 @@ describe('validateCredentials - PBKDF2 migration', () => {
 			.join('');
 
 		await rawDb(db).exec(`
-			INSERT INTO users (id, name, email, password_hash, role, created_at, updated_at)
-			VALUES ('${userId}', 'Test User', 'subsequent@test.com', '${legacyHash}', 'admin', datetime('now'), datetime('now'))
+			INSERT INTO users (id, name, email, email_normalized, password_hash, role, created_at, updated_at)
+			VALUES ('${userId}', 'Test User', 'subsequent@test.com', 'subsequent@test.com', '${legacyHash}', 'admin', datetime('now'), datetime('now'))
 		`);
 
 		// First login - migrates
@@ -223,8 +223,8 @@ describe('validateCredentials - PBKDF2 migration', () => {
 			.join('');
 
 		await rawDb(db).exec(`
-			INSERT INTO users (id, name, email, password_hash, role, created_at, updated_at)
-			VALUES ('${userId}', 'Test User', 'concurrent@test.com', '${legacyHash}', 'admin', datetime('now'), datetime('now'))
+			INSERT INTO users (id, name, email, email_normalized, password_hash, role, created_at, updated_at)
+			VALUES ('${userId}', 'Test User', 'concurrent@test.com', 'concurrent@test.com', '${legacyHash}', 'admin', datetime('now'), datetime('now'))
 		`);
 
 		// Simulate two concurrent login attempts by calling validateCredentials twice

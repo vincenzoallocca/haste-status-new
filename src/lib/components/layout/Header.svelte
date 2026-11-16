@@ -27,45 +27,39 @@
 		{ href: '/', label: 'Dashboard', match: (path) => path === '/' },
 		{
 			href: '/admin/status',
-			label: 'Status',
+			label: 'Status Page',
 			match: (path) => path.startsWith('/admin/status') || path.startsWith('/announcements')
 		},
 		{
 			href: '/notifications',
-			label: 'Notifications',
+			label: 'Notifiche',
 			match: (path) => path.startsWith('/notifications')
 		},
-		{ href: '/settings', label: 'Settings', match: (path) => path.startsWith('/settings') }
+		{ href: '/settings', label: 'Impostazioni', match: (path) => path.startsWith('/settings') }
 	];
 
 	const currentPath = $derived($page.url.pathname);
 </script>
 
-<header class="hidden border-b border-gray-200 bg-white md:block">
+<header class="hidden border-b border-white/10 bg-[#0e0e0e] md:block sticky top-0 z-40">
 	<div class="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
 		<div class="flex items-center gap-8">
-			<a href="/" class="flex items-center gap-2">
-				<div class="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600 text-white">
-					<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-						<path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							stroke-width="2"
-							d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-						></path>
-					</svg>
-				</div>
-				<span class="text-lg font-semibold text-gray-900">Pingflare</span>
+			<a href="/" class="flex items-center gap-3">
+				<img src="/logo.svg" alt="HASTE" class="h-6 w-auto" />
+				<div class="h-4 w-px bg-white/10"></div>
+				<span class="font-mono text-xs font-bold uppercase tracking-widest text-neutral-300">
+					Admin
+				</span>
 			</a>
 
-			<nav class="flex items-center gap-1">
+			<nav class="flex items-center gap-1 font-mono text-xs">
 				{#each navItems as item (item.href)}
 					{@const isActive = item.match(currentPath)}
 					<a
 						href={item.href}
-						class="rounded-lg px-3 py-2 text-sm font-medium transition-colors {isActive
-							? 'bg-gray-100 text-gray-900'
-							: 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'}"
+						class="rounded-md px-3 py-1.5 transition-colors {isActive
+							? 'bg-neutral-800 text-white font-semibold'
+							: 'text-neutral-400 hover:bg-neutral-900 hover:text-white'}"
 						aria-current={isActive ? 'page' : undefined}
 					>
 						{item.label}
@@ -74,18 +68,27 @@
 			</nav>
 		</div>
 
-		{#if user}
-			<div class="flex items-center gap-4">
-				<span class="text-sm text-gray-600">{user.name}</span>
+		<div class="flex items-center gap-4 font-mono text-xs">
+			<a
+				href="/status"
+				target="_blank"
+				class="text-neutral-400 hover:text-white transition flex items-center gap-1"
+			>
+				Vedi Status Pubblico <span class="text-[#d4200a]">↗</span>
+			</a>
+
+			{#if user}
+				<div class="h-4 w-px bg-white/10"></div>
+				<span class="text-neutral-300 font-semibold">{user.name}</span>
 				<button
 					type="button"
 					onclick={handleLogout}
 					disabled={loggingOut}
-					class="rounded-lg px-3 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50 hover:text-gray-900 disabled:opacity-50"
+					class="rounded-md border border-white/10 px-2.5 py-1 text-neutral-400 transition hover:border-[#d4200a]/50 hover:bg-[#d4200a]/10 hover:text-red-400 disabled:opacity-50"
 				>
-					{loggingOut ? 'Logging out...' : 'Log out'}
+					{loggingOut ? 'Uscita...' : 'Esci'}
 				</button>
-			</div>
-		{/if}
+			{/if}
+		</div>
 	</div>
 </header>

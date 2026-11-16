@@ -35,7 +35,7 @@
 	function getGroupStatusBadge(status: OverallStatus): { text: string; class: string } {
 		switch (status) {
 			case 'operational':
-				return { text: 'Operational', class: 'bg-green-100 text-green-800' };
+				return { text: 'Operational', class: 'border border-white/20 bg-white/10 text-white' };
 			case 'degraded':
 				return { text: 'Degraded', class: 'bg-yellow-100 text-yellow-800' };
 			case 'partial_outage':
@@ -88,7 +88,7 @@
 		{#if data.activeIncidents.length > 0}
 			<div class="mb-8">
 				<h3 class="mb-4 text-lg font-semibold text-gray-900">Active Incidents</h3>
-				{#each data.activeIncidents as incident}
+				{#each data.activeIncidents as incident (incident.id)}
 					<div class="mb-4 rounded-lg border-l-4 border-orange-400 bg-orange-50 p-4">
 						<div class="flex items-start justify-between">
 							<div>
@@ -123,7 +123,7 @@
 
 			{#if data.groups.length > 0}
 				<div class="space-y-6">
-					{#each data.groups as group}
+					{#each data.groups as group (group.id)}
 						{@const statusBadge = getGroupStatusBadge(group.overall_status)}
 						<div class="rounded-lg border border-gray-200 bg-white shadow-sm">
 							<!-- Group Header -->
@@ -143,7 +143,7 @@
 							<!-- Monitors in this group -->
 							{#if group.monitors.length > 0}
 								<div class="divide-y divide-gray-50 p-4">
-									{#each group.monitors as monitor}
+									{#each group.monitors as monitor (monitor.id)}
 										<div class="py-2 first:pt-0 last:pb-0">
 											<UptimeBars
 												name={monitor.name}

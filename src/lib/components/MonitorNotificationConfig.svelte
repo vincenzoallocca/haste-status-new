@@ -132,7 +132,7 @@
 										type="checkbox"
 										checked={isNotifyOn(channel.id, 'up')}
 										onchange={() => toggleNotifyOn(channel.id, 'up')}
-										class="h-3.5 w-3.5 rounded border-gray-300 text-green-600 focus:ring-green-500"
+										class="h-3.5 w-3.5 rounded border-gray-300 text-[#d4200a] focus:ring-[#d4200a]"
 									/>
 									<span class="text-xs text-gray-700">Up</span>
 								</label>

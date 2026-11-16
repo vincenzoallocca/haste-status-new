@@ -1,5 +1,5 @@
 import type { D1Database } from '@cloudflare/workers-types';
-import type { Monitor, Check, MonitorStatus } from '$lib/types/monitor';
+import type { MonitorStatus, Check } from '$lib/types/monitor';
 import type {
 	DailyStatus,
 	StatusMonitor,
@@ -9,6 +9,7 @@ import type {
 	CreateIncidentInput,
 	AddIncidentUpdateInput
 } from '$lib/types/status';
+import { chunkedInQuery } from './query-helpers';
 
 // ============================================
 // Monitor Status Functions
@@ -50,23 +51,24 @@ export async function getDailyStatus(db: D1Database, monitorId: string): Promise
 			downtime_minutes: number;
 		}>();
 
-	// Also get raw checks for recent days not yet aggregated
+	// Also get raw checks for recent days not yet aggregated (today only, uses check_date index)
+	const today = new Date().toISOString().split('T')[0];
 	const rawChecks = await db
 		.prepare(
 			`
 			SELECT
-				DATE(checked_at) as date,
+				check_date as date,
 				COUNT(*) as total_checks,
 				SUM(CASE WHEN status = 'up' THEN 1 ELSE 0 END) as up_checks,
 				SUM(CASE WHEN status = 'down' THEN 1 ELSE 0 END) as down_checks,
 				SUM(CASE WHEN status = 'degraded' THEN 1 ELSE 0 END) as degraded_checks
 			FROM checks
-			WHERE monitor_id = ? AND DATE(checked_at) >= ?
-			GROUP BY DATE(checked_at)
+			WHERE monitor_id = ? AND check_date >= ?
+			GROUP BY check_date
 			ORDER BY date ASC
 		`
 		)
-		.bind(monitorId, cutoff)
+		.bind(monitorId, today)
 		.all<{
 			date: string;
 			total_checks: number;
@@ -114,19 +116,20 @@ export async function getDailyStatus(db: D1Database, monitorId: string): Promise
 }
 
 /**
- * Calculate 90-day uptime percentage
+ * Calculate 90-day uptime percentage using pre-aggregated daily_status table
+ * Much more efficient than scanning raw checks
  */
 export async function getUptime90d(db: D1Database, monitorId: string): Promise<number> {
-	const cutoff = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
+	const cutoff = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
 	const result = await db
 		.prepare(
 			`
 			SELECT
-				COUNT(*) as total,
-				SUM(CASE WHEN status = 'up' THEN 1 ELSE 0 END) as up
-			FROM checks
-			WHERE monitor_id = ? AND checked_at > ?
+				SUM(total_checks) as total,
+				SUM(up_checks) as up
+			FROM daily_status
+			WHERE monitor_id = ? AND date >= ?
 		`
 		)
 		.bind(monitorId, cutoff)
@@ -138,30 +141,129 @@ export async function getUptime90d(db: D1Database, monitorId: string): Promise<n
 
 /**
  * Get all monitors with status data (for admin)
+ * Optimized: Uses 2 queries total (monitors+latest_check+uptime, daily_status batch)
+ * instead of N+1 pattern (3 queries per monitor)
  */
 export async function getAllMonitorsForStatusPage(db: D1Database): Promise<StatusMonitor[]> {
-	const monitors = await db.prepare('SELECT * FROM monitors ORDER BY name ASC').all<Monitor>();
+	// Query 1: Get all monitors with latest check and 90d uptime from daily_status
+	const monitors = await db
+		.prepare(
+			`
+			SELECT 
+				m.id,
+				m.name,
+				m.group_id,
+				m.interval_seconds,
+				-- Latest check
+				c.status as current_status,
+				c.response_time_ms,
+				c.checked_at,
+				-- 90d uptime from daily_status (pre-aggregated)
+				COALESCE(ds.uptime_90d, 100) as uptime_90d
+			FROM monitors m
+			LEFT JOIN (
+				SELECT monitor_id, status, response_time_ms, checked_at
+				FROM checks
+				WHERE (monitor_id, checked_at) IN (
+					SELECT monitor_id, MAX(checked_at)
+					FROM checks
+					GROUP BY monitor_id
+				)
+			) c ON m.id = c.monitor_id
+			LEFT JOIN (
+				SELECT monitor_id, 
+					CASE 
+						WHEN SUM(total_checks) > 0 
+						THEN ROUND((SUM(up_checks) * 10000.0 / SUM(total_checks))) / 100
+						ELSE 100 
+					END as uptime_90d
+				FROM daily_status
+				WHERE date >= date('now', '-90 days')
+				GROUP BY monitor_id
+			) ds ON m.id = ds.monitor_id
+			ORDER BY m.name ASC
+		`
+		)
+		.all<{
+			id: string;
+			name: string;
+			group_id: string | null;
+			interval_seconds: number;
+			current_status: string | null;
+			response_time_ms: number | null;
+			checked_at: string | null;
+			uptime_90d: number;
+		}>();
 
-	const statusMonitors: StatusMonitor[] = await Promise.all(
-		monitors.results.map(async (monitor) => {
-			const [lastCheck, dailyStatus, uptime90d] = await Promise.all([
-				getLastCheck(db, monitor.id),
-				getDailyStatus(db, monitor.id),
-				getUptime90d(db, monitor.id)
-			]);
+	// Query 2: Get daily status for all monitors (90 days) - chunked batch query
+	const monitorIds = monitors.results.map(m => m.id);
+	const dailyStatusMap = new Map<string, DailyStatus[]>();
 
-			return {
-				id: monitor.id,
-				name: monitor.name,
-				group_id: monitor.group_id,
-				current_status: lastCheck?.status ?? null,
-				uptime_90d: uptime90d,
-				daily_status: dailyStatus
-			};
-		})
-	);
+	if (monitorIds.length > 0) {
+		const cutoff = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
-	return statusMonitors;
+		const dailyData = await chunkedInQuery<{
+			monitor_id: string;
+			date: string;
+			total_checks: number;
+			up_checks: number;
+			down_checks: number;
+			degraded_checks: number;
+			downtime_minutes: number;
+		}>(
+			db,
+			`
+			SELECT monitor_id, date, total_checks, up_checks, down_checks, degraded_checks, downtime_minutes
+			FROM daily_status
+			WHERE monitor_id IN (?) AND date >= ?
+			ORDER BY monitor_id, date ASC
+			`,
+			monitorIds,
+			[cutoff]
+		);
+
+		// Group by monitor_id
+		for (const row of dailyData) {
+			if (!dailyStatusMap.has(row.monitor_id)) {
+				dailyStatusMap.set(row.monitor_id, []);
+			}
+			let status: 'up' | 'down' | 'degraded' | 'none' = 'none';
+			if (row.total_checks > 0) {
+				if (row.down_checks > 0) status = 'down';
+				else if (row.degraded_checks > 0) status = 'degraded';
+				else status = 'up';
+			}
+			dailyStatusMap.get(row.monitor_id)!.push({
+				date: row.date,
+				status,
+				downtime_minutes: row.downtime_minutes || 0
+			});
+		}
+	}
+
+	// Build StatusMonitor objects
+	return monitors.results.map(monitor => {
+		const dailyStatus = dailyStatusMap.get(monitor.id) || [];
+		// Fill missing dates with 'none'
+		const allDates = new Map<string, DailyStatus>();
+		for (let i = 89; i >= 0; i--) {
+			const date = new Date(Date.now() - i * 24 * 60 * 60 * 1000);
+			const dateStr = date.toISOString().split('T')[0];
+			allDates.set(dateStr, { date: dateStr, status: 'none', downtime_minutes: 0 });
+		}
+		for (const ds of dailyStatus) {
+			allDates.set(ds.date, ds);
+		}
+
+		return {
+			id: monitor.id,
+			name: monitor.name,
+			group_id: monitor.group_id,
+			current_status: (monitor.current_status as MonitorStatus) ?? null,
+			uptime_90d: monitor.uptime_90d,
+			daily_status: Array.from(allDates.values()).sort((a, b) => a.date.localeCompare(b.date))
+		};
+	});
 }
 
 /**
@@ -207,13 +309,14 @@ export async function getEffectiveStatus(
 
 /**
  * Aggregate daily status from raw checks (run once per day)
+ * Uses check_date index for efficiency
  */
 export async function aggregateDailyStatus(db: D1Database): Promise<void> {
 	// Get yesterday's date
 	const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
 	const dateStr = yesterday.toISOString().split('T')[0];
 
-	// Aggregate for each monitor
+	// Aggregate for each monitor using check_date index
 	const aggregates = await db
 		.prepare(
 			`
@@ -224,7 +327,7 @@ export async function aggregateDailyStatus(db: D1Database): Promise<void> {
 				SUM(CASE WHEN status = 'down' THEN 1 ELSE 0 END) as down_checks,
 				SUM(CASE WHEN status = 'degraded' THEN 1 ELSE 0 END) as degraded_checks
 			FROM checks
-			WHERE DATE(checked_at) = ?
+			WHERE check_date = ?
 			GROUP BY monitor_id
 		`
 		)
@@ -271,7 +374,38 @@ export async function aggregateDailyStatus(db: D1Database): Promise<void> {
 // ============================================
 
 /**
+ * Batch fetch incident updates for multiple incidents
+ * Replaces N+1 pattern with chunked queries using IN clause
+ */
+async function fetchIncidentUpdatesBatch(
+	db: D1Database,
+	incidentIds: string[]
+): Promise<Map<string, IncidentUpdate[]>> {
+	const updatesMap = new Map<string, IncidentUpdate[]>();
+
+	if (incidentIds.length === 0) {
+		return updatesMap;
+	}
+
+	const updates = await chunkedInQuery<IncidentUpdate>(
+		db,
+		`SELECT * FROM incident_updates WHERE incident_id IN (?) ORDER BY incident_id, created_at DESC`,
+		incidentIds
+	);
+
+	for (const update of updates) {
+		if (!updatesMap.has(update.incident_id)) {
+			updatesMap.set(update.incident_id, []);
+		}
+		updatesMap.get(update.incident_id)!.push(update);
+	}
+
+	return updatesMap;
+}
+
+/**
  * Get all incidents with their updates and group names
+ * Optimized: Batch fetches incident_updates in single query
  */
 export async function getAllIncidents(db: D1Database): Promise<Incident[]> {
 	const incidents = await db
@@ -285,22 +419,20 @@ export async function getAllIncidents(db: D1Database): Promise<Incident[]> {
 		)
 		.all<Omit<Incident, 'updates'>>();
 
-	const incidentsWithUpdates: Incident[] = await Promise.all(
-		incidents.results.map(async (incident) => {
-			const updates = await db
-				.prepare('SELECT * FROM incident_updates WHERE incident_id = ? ORDER BY created_at DESC')
-				.bind(incident.id)
-				.all<IncidentUpdate>();
+	const incidentIds = incidents.results.map(i => i.id);
+	const updatesMap = await fetchIncidentUpdatesBatch(db, incidentIds);
 
-			return { ...incident, updates: updates.results };
-		})
-	);
+	const incidentsWithUpdates: Incident[] = incidents.results.map(incident => ({
+		...incident,
+		updates: updatesMap.get(incident.id) || []
+	}));
 
 	return incidentsWithUpdates;
 }
 
 /**
  * Get active (unresolved) incidents with group names
+ * Optimized: Batch fetches incident_updates in single query
  */
 export async function getActiveIncidents(db: D1Database): Promise<Incident[]> {
 	const incidents = await db
@@ -315,22 +447,20 @@ export async function getActiveIncidents(db: D1Database): Promise<Incident[]> {
 		)
 		.all<Omit<Incident, 'updates'>>();
 
-	const incidentsWithUpdates: Incident[] = await Promise.all(
-		incidents.results.map(async (incident) => {
-			const updates = await db
-				.prepare('SELECT * FROM incident_updates WHERE incident_id = ? ORDER BY created_at DESC')
-				.bind(incident.id)
-				.all<IncidentUpdate>();
+	const incidentIds = incidents.results.map(i => i.id);
+	const updatesMap = await fetchIncidentUpdatesBatch(db, incidentIds);
 
-			return { ...incident, updates: updates.results };
-		})
-	);
+	const incidentsWithUpdates: Incident[] = incidents.results.map(incident => ({
+		...incident,
+		updates: updatesMap.get(incident.id) || []
+	}));
 
 	return incidentsWithUpdates;
 }
 
 /**
  * Get recent incidents (past 7 days) grouped by date with group names
+ * Optimized: Batch fetches incident_updates in single query
  */
 export async function getRecentIncidentsByDate(
 	db: D1Database,
@@ -351,17 +481,13 @@ export async function getRecentIncidentsByDate(
 		.bind(cutoff)
 		.all<Omit<Incident, 'updates'>>();
 
-	// Get updates for all incidents
-	const incidentsWithUpdates: Incident[] = await Promise.all(
-		incidents.results.map(async (incident) => {
-			const updates = await db
-				.prepare('SELECT * FROM incident_updates WHERE incident_id = ? ORDER BY created_at DESC')
-				.bind(incident.id)
-				.all<IncidentUpdate>();
+	const incidentIds = incidents.results.map(i => i.id);
+	const updatesMap = await fetchIncidentUpdatesBatch(db, incidentIds);
 
-			return { ...incident, updates: updates.results };
-		})
-	);
+	const incidentsWithUpdates: Incident[] = incidents.results.map(incident => ({
+		...incident,
+		updates: updatesMap.get(incident.id) || []
+	}));
 
 	// Group by date
 	const byDateMap = new Map<string, Incident[]>();
@@ -513,7 +639,8 @@ export async function deleteIncident(db: D1Database, id: string): Promise<void> 
 /**
  * Clean up old daily status records (keep N days)
  */
-export async function cleanupOldDailyStatus(db: D1Database, keepDays: number): Promise<void> {
+export async function cleanupOldDailyStatus(db: D1Database, keepDays: number): Promise<number> {
 	const cutoff = new Date(Date.now() - keepDays * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-	await db.prepare('DELETE FROM daily_status WHERE date < ?').bind(cutoff).run();
+	const result = await db.prepare('DELETE FROM daily_status WHERE date < ?').bind(cutoff).run();
+	return result.meta.changes;
 }

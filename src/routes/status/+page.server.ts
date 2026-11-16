@@ -14,13 +14,22 @@ export const load: PageServerLoad = async ({ platform }) => {
 
 	const db = platform.env.DB;
 
-	const [groups, activeIncidents] = await Promise.all([
-		getPublicGroupsWithStatus(db),
-		getActiveIncidents(db)
-	]);
+	try {
+		const [groups, activeIncidents] = await Promise.all([
+			getPublicGroupsWithStatus(db),
+			getActiveIncidents(db)
+		]);
 
-	return {
-		groups,
-		activeIncidents
-	};
+		return {
+			groups,
+			activeIncidents
+		};
+	} catch (error) {
+		console.error('[Status Page] Failed to load status from D1:', error);
+		return {
+			groups: [] as GroupWithStatus[],
+			activeIncidents: [] as Incident[],
+			dbUnavailable: true
+		};
+	}
 };

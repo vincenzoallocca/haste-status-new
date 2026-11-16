@@ -231,7 +231,7 @@
 		<!-- Groups List -->
 		{#if data.groups.length > 0}
 			<div class="space-y-3">
-				{#each data.groups as group}
+				{#each data.groups as group (group.id)}
 					<Card>
 						<div class="flex items-center justify-between">
 							<div>
@@ -239,7 +239,7 @@
 									<h4 class="font-semibold text-gray-900">{group.name}</h4>
 									{#if group.is_public}
 										<span
-											class="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700"
+											class="rounded-full border border-white/20 bg-white/10 px-2 py-0.5 text-xs font-mono text-white"
 											>Public</span
 										>
 									{:else}

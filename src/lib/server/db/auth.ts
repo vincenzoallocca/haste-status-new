@@ -112,13 +112,14 @@ export async function createUser(db: D1Database, input: CreateUserInput): Promis
 	const passwordHash = await hashPassword(input.password);
 	const now = new Date().toISOString();
 	const role = input.role ?? 'viewer';
+	const emailNormalized = input.email.trim().toLowerCase();
 
 	await db
 		.prepare(
-			`INSERT INTO users (id, name, email, password_hash, role, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`
+			`INSERT INTO users (id, name, email, email_normalized, password_hash, role, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
 		)
-		.bind(id, input.name, input.email, passwordHash, role, now, now)
+		.bind(id, input.name, input.email, emailNormalized, passwordHash, role, now, now)
 		.run();
 
 	return {
@@ -132,7 +133,8 @@ export async function createUser(db: D1Database, input: CreateUserInput): Promis
 }
 
 export async function getUserByEmail(db: D1Database, email: string): Promise<User | null> {
-	return db.prepare('SELECT * FROM users WHERE email = ?').bind(email).first<User>();
+	const normalizedEmail = email.trim().toLowerCase();
+	return db.prepare('SELECT * FROM users WHERE email_normalized = ?').bind(normalizedEmail).first<User>();
 }
 
 export async function getUserById(db: D1Database, id: string): Promise<User | null> {

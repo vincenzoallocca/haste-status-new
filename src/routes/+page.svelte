@@ -105,7 +105,7 @@
 			</Card>
 			<Card padding="sm" class="text-center sm:text-left">
 				<p class="text-xs text-gray-500 sm:text-sm">Up</p>
-				<p class="text-xl font-bold text-green-600 sm:text-2xl">{upCount}</p>
+				<p class="text-xl font-bold text-[#f2f0eb] sm:text-2xl">{upCount}</p>
 			</Card>
 			<Card padding="sm" class="text-center sm:text-left">
 				<p class="text-xs text-gray-500 sm:text-sm">Down</p>

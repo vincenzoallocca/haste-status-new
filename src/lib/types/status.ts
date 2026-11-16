@@ -79,25 +79,25 @@ export function getOverallStatus(monitors: StatusMonitor[]): OverallStatus {
 export function getOverallStatusText(status: OverallStatus): string {
 	switch (status) {
 		case 'operational':
-			return 'All Systems Operational';
+			return 'Tutti i sistemi sono operativi';
 		case 'degraded':
-			return 'Degraded Performance';
+			return 'Rallentamento delle prestazioni';
 		case 'partial_outage':
-			return 'Partial System Outage';
+			return 'Disservizio parziale';
 		case 'major_outage':
-			return 'Major System Outage';
+			return 'Disservizio grave';
 	}
 }
 
 export function getOverallStatusColor(status: OverallStatus): string {
 	switch (status) {
 		case 'operational':
-			return 'bg-green-500';
+			return 'bg-[#f2f0eb]';
 		case 'degraded':
-			return 'bg-yellow-500';
+			return 'bg-[#ff5a3d]';
 		case 'partial_outage':
-			return 'bg-orange-500';
+			return 'bg-[#ff5a3d]';
 		case 'major_outage':
-			return 'bg-red-500';
+			return 'bg-[#d4200a]';
 	}
 }
