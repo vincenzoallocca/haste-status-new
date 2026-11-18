@@ -430,18 +430,35 @@ export async function getAllIncidents(db: D1Database): Promise<Incident[]> {
 	return incidentsWithUpdates;
 }
 
+/** Incidenti globali (senza gruppo) o di gruppi pubblici. */
+const PUBLIC_INCIDENT_FILTER = ' AND (i.group_id IS NULL OR g.is_public = 1)';
+
+export const MAX_INCIDENT_DAYS = 90;
+
+/** Limita la finestra in giorni a 1..90 (input non numerico -> 7). */
+export function clampIncidentDays(days: unknown): number {
+	const n = typeof days === 'number' ? Math.floor(days) : parseInt(String(days), 10);
+	if (!Number.isFinite(n)) return 7;
+	return Math.min(MAX_INCIDENT_DAYS, Math.max(1, n));
+}
+
 /**
  * Get active (unresolved) incidents with group names
  * Optimized: Batch fetches incident_updates in single query
  */
-export async function getActiveIncidents(db: D1Database): Promise<Incident[]> {
+export async function getActiveIncidents(
+	db: D1Database,
+	options: { publicOnly?: boolean } = {}
+): Promise<Incident[]> {
+	// publicOnly: esclude gli incidenti legati a gruppi non pubblici (is_public = 0)
+	const visibility = options.publicOnly ? PUBLIC_INCIDENT_FILTER : '';
 	const incidents = await db
 		.prepare(
 			`
 			SELECT i.*, g.name as group_name
 			FROM incidents i
 			LEFT JOIN monitor_groups g ON i.group_id = g.id
-			WHERE i.status != 'resolved'
+			WHERE i.status != 'resolved'${visibility}
 			ORDER BY i.created_at DESC
 		`
 		)
@@ -464,9 +481,12 @@ export async function getActiveIncidents(db: D1Database): Promise<Incident[]> {
  */
 export async function getRecentIncidentsByDate(
 	db: D1Database,
-	days: number = 7
+	days: number = 7,
+	options: { publicOnly?: boolean } = {}
 ): Promise<IncidentsByDate[]> {
+	days = clampIncidentDays(days);
 	const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+	const visibility = options.publicOnly ? PUBLIC_INCIDENT_FILTER : '';
 
 	const incidents = await db
 		.prepare(
@@ -474,7 +494,7 @@ export async function getRecentIncidentsByDate(
 			SELECT i.*, g.name as group_name
 			FROM incidents i
 			LEFT JOIN monitor_groups g ON i.group_id = g.id
-			WHERE i.created_at > ?
+			WHERE i.created_at > ?${visibility}
 			ORDER BY i.created_at DESC
 		`
 		)

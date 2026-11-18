@@ -24,6 +24,11 @@ export const GET: RequestHandler = async ({ platform, request }) => {
 	}
 
 	try {
+		// Chiave di cache senza query string: parametri arbitrari non devono
+		// aggirare la cache e moltiplicare le letture D1 (audit SEC-S-07).
+		const reqUrl = new URL(request.url);
+		const cacheKey = `${reqUrl.origin}${reqUrl.pathname}`;
+
 		// Check Cloudflare Cache API first
 		let cache: { match: (req: Request | string) => Promise<Response | undefined>; put: (req: Request | string, resp: Response) => Promise<void> } | undefined;
 		try {
@@ -34,7 +39,7 @@ export const GET: RequestHandler = async ({ platform, request }) => {
 
 		if (cache) {
 			try {
-				const cached = await cache.match(request.url);
+				const cached = await cache.match(cacheKey);
 				if (cached) {
 					return cached;
 				}
@@ -68,7 +73,7 @@ export const GET: RequestHandler = async ({ platform, request }) => {
 		// Store in Cloudflare Cache API if available
 		if (cache) {
 			try {
-				await cache.put(request.url, response.clone());
+				await cache.put(cacheKey, response.clone());
 			} catch {
 				// Cache put error ignored
 			}

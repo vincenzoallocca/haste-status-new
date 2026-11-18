@@ -202,13 +202,22 @@ export async function deleteUser(db: D1Database, userId: string): Promise<boolea
 	return result.meta.changes > 0;
 }
 
+// Hash PBKDF2 valido di una password casuale, usato solo per uniformare i tempi.
+const DUMMY_PASSWORD_HASH =
+	'pbkdf2:100000:00000000000000000000000000000000:0000000000000000000000000000000000000000000000000000000000000000';
+
 export async function validateCredentials(
 	db: D1Database,
 	email: string,
 	password: string
 ): Promise<User | null> {
 	const user = await getUserByEmail(db, email);
-	if (!user) return null;
+	if (!user) {
+		// Audit SEC-S-03: stesso costo di una verifica reale, cosi' i tempi
+		// di risposta non rivelano se l'email esiste.
+		await verifyPassword(password, DUMMY_PASSWORD_HASH);
+		return null;
+	}
 
 	const isValid = await verifyPassword(password, user.password_hash);
 	if (!isValid) return null;
@@ -279,6 +288,14 @@ export async function deleteSession(db: D1Database, sessionId: string): Promise<
 
 export async function deleteUserSessions(db: D1Database, userId: string): Promise<void> {
 	await db.prepare('DELETE FROM sessions WHERE user_id = ?').bind(userId).run();
+}
+
+export async function deleteOtherUserSessions(
+	db: D1Database,
+	userId: string,
+	keepSessionId: string
+): Promise<void> {
+	await db.prepare('DELETE FROM sessions WHERE user_id = ? AND id != ?').bind(userId, keepSessionId).run();
 }
 
 export async function cleanupExpiredSessions(db: D1Database): Promise<number> {

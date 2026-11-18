@@ -22,12 +22,13 @@ const PUBLIC_PATHS = [
 	'/api/public'
 ];
 
-// CSP configuration for Report-Only mode
-// All resources are self-hosted; no external dependencies
-const CSP_REPORT_ONLY = [
+// CSP applicata (audit 2026-11-18, SEC-S-06). Per le pagine HTML la imposta
+// SvelteKit (kit.csp in svelte.config.js, con nonce/hash degli script inline);
+// questa e' la stessa policy usata per le risposte che non ne hanno una (API).
+const CSP = [
 	"default-src 'self'",
 	"script-src 'self'",
-	"style-src 'self'",
+	"style-src 'self' 'unsafe-inline'",
 	"img-src 'self' data:",
 	"font-src 'self'",
 	"connect-src 'self'",
@@ -48,10 +49,32 @@ export const handle: Handle = async ({ event, resolve }) => {
 		response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
 		response.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
 		response.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
-		// Content Security Policy (Report-Only mode for validation)
-		response.headers.set('Content-Security-Policy-Report-Only', CSP_REPORT_ONLY);
+		if (!response.headers.has('Content-Security-Policy')) {
+			response.headers.set('Content-Security-Policy', CSP);
+		}
 		return response;
 	};
+
+	// Audit SEC-S-04: le richieste che modificano dati devono arrivare da questo
+	// stesso origin. checkOrigin di SvelteKit copre solo i form, non le POST
+	// fetch senza Content-Type da un sottodominio di haste.it. Le chiamate
+	// server-to-server (cron) non hanno Origin e restano ammesse.
+	const MUTATING = ['POST', 'PUT', 'PATCH', 'DELETE'];
+	const method = event.request?.method ?? 'GET';
+	const origin = event.request?.headers.get('Origin') ?? null;
+	if (
+		MUTATING.includes(method) &&
+		origin !== null &&
+		origin !== url.origin &&
+		!url.pathname.startsWith('/api/cron')
+	) {
+		return secureResponse(
+			new Response(JSON.stringify({ error: 'Cross-origin request blocked' }), {
+				status: 403,
+				headers: { 'Content-Type': 'application/json' }
+			})
+		);
+	}
 
 	// Initialize locals
 	event.locals.user = null;
