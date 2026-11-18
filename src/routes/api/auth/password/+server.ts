@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { verifyUserPassword, updateUserPassword } from '$lib/server/db/auth';
+import { verifyUserPassword, updateUserPassword, deleteOtherUserSessions } from '$lib/server/db/auth';
 
 export const PUT: RequestHandler = async ({ request, locals, platform }) => {
 	if (!platform?.env?.DB) {
@@ -37,6 +37,8 @@ export const PUT: RequestHandler = async ({ request, locals, platform }) => {
 
 		// Update password
 		await updateUserPassword(db, locals.user.id, input.newPassword);
+		// Audit SEC-S-05: chiude tutte le altre sessioni dell'utente.
+		await deleteOtherUserSessions(db, locals.user.id, locals.sessionId ?? '');
 
 		return json({ success: true });
 	} catch (err) {

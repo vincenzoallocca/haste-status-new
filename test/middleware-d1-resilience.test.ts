@@ -243,7 +243,7 @@ describe('Middleware D1 Resilience (hooks.server.ts)', () => {
 		expect(response.headers.get('Referrer-Policy')).toBe('strict-origin-when-cross-origin');
 		expect(response.headers.get('Permissions-Policy')).toBe('camera=(), microphone=(), geolocation=()');
 		expect(response.headers.get('Strict-Transport-Security')).toBe('max-age=31536000; includeSubDomains; preload');
-		expect(response.headers.get('Content-Security-Policy-Report-Only')).toContain("default-src 'self'");
+		expect(response.headers.get('Content-Security-Policy')).toContain("default-src 'self'");
 	});
 
 	it('10. D1 errors do not produce unhandled exceptions', async () => {

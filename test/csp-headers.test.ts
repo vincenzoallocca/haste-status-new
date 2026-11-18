@@ -69,7 +69,7 @@ describe('CSP Headers - Security Policy Verification', () => {
 		return sessionId;
 	}
 
-	it('handles request and applies CSP Report-Only header on public path', async () => {
+	it('handles request and applies CSP header on public path', async () => {
 		const handle = await getHandle();
 		
 		const mockEvent = {
@@ -89,17 +89,17 @@ describe('CSP Headers - Security Policy Verification', () => {
 		
 		const response = await handle({ event: mockEvent, resolve: mockResolve });
 		
-		// Verify CSP Report-Only header is present
-		expect(response.headers.get('Content-Security-Policy-Report-Only')).toBeDefined();
-		expect(response.headers.get('Content-Security-Policy-Report-Only')).toContain("default-src 'self'");
-		expect(response.headers.get('Content-Security-Policy-Report-Only')).toContain("script-src 'self'");
-		expect(response.headers.get('Content-Security-Policy-Report-Only')).toContain("style-src 'self'");
+		// Verify CSP header is present
+		expect(response.headers.get('Content-Security-Policy')).toBeTruthy();
+		expect(response.headers.get('Content-Security-Policy')).toContain("default-src 'self'");
+		expect(response.headers.get('Content-Security-Policy')).toContain("script-src 'self'");
+		expect(response.headers.get('Content-Security-Policy')).toContain("style-src 'self'");
 		
-		// Verify NO enforcing CSP header is set
-		expect(response.headers.get('Content-Security-Policy')).toBeNull();
+		// Report-Only non piu' usato (audit 2026-11-18: CSP applicata)
+		expect(response.headers.get('Content-Security-Policy-Report-Only')).toBeNull();
 	});
 
-	it('applies CSP Report-Only header on API responses (public path)', async () => {
+	it('applies CSP header on API responses (public path)', async () => {
 		const handle = await getHandle();
 		
 		const mockEvent = {
@@ -122,11 +122,11 @@ describe('CSP Headers - Security Policy Verification', () => {
 		
 		const response = await handle({ event: mockEvent, resolve: mockResolve });
 		
-		expect(response.headers.get('Content-Security-Policy-Report-Only')).toBeDefined();
-		expect(response.headers.get('Content-Security-Policy')).toBeNull();
+		expect(response.headers.get('Content-Security-Policy')).toBeTruthy();
+		expect(response.headers.get('Content-Security-Policy-Report-Only')).toBeNull();
 	});
 
-	it('applies CSP Report-Only header on error responses (public path)', async () => {
+	it('applies CSP header on error responses (public path)', async () => {
 		const handle = await getHandle();
 		
 		const mockEvent = {
@@ -146,11 +146,11 @@ describe('CSP Headers - Security Policy Verification', () => {
 		
 		const response = await handle({ event: mockEvent, resolve: mockResolve });
 		
-		expect(response.headers.get('Content-Security-Policy-Report-Only')).toBeDefined();
-		expect(response.headers.get('Content-Security-Policy')).toBeNull();
+		expect(response.headers.get('Content-Security-Policy')).toBeTruthy();
+		expect(response.headers.get('Content-Security-Policy-Report-Only')).toBeNull();
 	});
 
-	it('applies CSP Report-Only header on redirect responses', async () => {
+	it('applies CSP header on redirect responses', async () => {
 		const handle = await getHandle();
 		
 		const mockEvent = {
@@ -174,8 +174,8 @@ describe('CSP Headers - Security Policy Verification', () => {
 		
 		const response = await handle({ event: mockEvent, resolve: mockResolve });
 		
-		expect(response.headers.get('Content-Security-Policy-Report-Only')).toBeDefined();
-		expect(response.headers.get('Content-Security-Policy')).toBeNull();
+		expect(response.headers.get('Content-Security-Policy')).toBeTruthy();
+		expect(response.headers.get('Content-Security-Policy-Report-Only')).toBeNull();
 	});
 
 	it('verifies CSP policy contains all required directives', async () => {
@@ -198,7 +198,7 @@ describe('CSP Headers - Security Policy Verification', () => {
 		
 		const response = await handle({ event: mockEvent, resolve: mockResolve });
 		
-		const csp = response.headers.get('Content-Security-Policy-Report-Only');
+		const csp = response.headers.get('Content-Security-Policy');
 		expect(csp).toBeDefined();
 		
 		// Verify all required directives are present
@@ -249,7 +249,7 @@ describe('CSP Headers - Security Policy Verification', () => {
 		expect(response.headers.get('Strict-Transport-Security')).toBe('max-age=31536000; includeSubDomains; preload');
 	});
 
-	it('applies CSP Report-Only on cron endpoint', async () => {
+	it('applies CSP on cron endpoint', async () => {
 		const handle = await getHandle();
 		
 		const mockEvent = {
@@ -272,11 +272,11 @@ describe('CSP Headers - Security Policy Verification', () => {
 		
 		const response = await handle({ event: mockEvent, resolve: mockResolve });
 		
-		expect(response.headers.get('Content-Security-Policy-Report-Only')).toBeDefined();
-		expect(response.headers.get('Content-Security-Policy')).toBeNull();
+		expect(response.headers.get('Content-Security-Policy')).toBeTruthy();
+		expect(response.headers.get('Content-Security-Policy-Report-Only')).toBeNull();
 	});
 
-	it('applies CSP Report-Only on public status page', async () => {
+	it('applies CSP on public status page', async () => {
 		const handle = await getHandle();
 		
 		const mockEvent = {
@@ -299,11 +299,11 @@ describe('CSP Headers - Security Policy Verification', () => {
 		
 		const response = await handle({ event: mockEvent, resolve: mockResolve });
 		
-		expect(response.headers.get('Content-Security-Policy-Report-Only')).toBeDefined();
-		expect(response.headers.get('Content-Security-Policy')).toBeNull();
+		expect(response.headers.get('Content-Security-Policy')).toBeTruthy();
+		expect(response.headers.get('Content-Security-Policy-Report-Only')).toBeNull();
 	});
 
-	it('applies CSP Report-Only header on authenticated dashboard', async () => {
+	it('applies CSP header on authenticated dashboard', async () => {
 		const handle = await getHandle();
 		
 		// Create a test user and session
@@ -327,7 +327,7 @@ describe('CSP Headers - Security Policy Verification', () => {
 		
 		const response = await handle({ event: mockEvent, resolve: mockResolve });
 		
-		expect(response.headers.get('Content-Security-Policy-Report-Only')).toBeDefined();
-		expect(response.headers.get('Content-Security-Policy')).toBeNull();
+		expect(response.headers.get('Content-Security-Policy')).toBeTruthy();
+		expect(response.headers.get('Content-Security-Policy-Report-Only')).toBeNull();
 	});
 });

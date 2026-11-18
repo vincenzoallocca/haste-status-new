@@ -17,7 +17,7 @@ export const load: PageServerLoad = async ({ platform }) => {
 	try {
 		const [groups, activeIncidents] = await Promise.all([
 			getPublicGroupsWithStatus(db),
-			getActiveIncidents(db)
+			getActiveIncidents(db, { publicOnly: true })
 		]);
 
 		return {

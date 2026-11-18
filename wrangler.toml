@@ -3,6 +3,10 @@ main = "dist/_worker.js"
 compatibility_date = "2025-11-17"
 compatibility_flags = ["nodejs_compat"]
 
+# Niente copie su *.workers.dev o URL di anteprima: solo status.haste.it (audit CFG-02)
+workers_dev = false
+preview_urls = false
+
 # Custom domain configuration for haste.it
 routes = [
   { pattern = "status.haste.it", custom_domain = true }
@@ -33,3 +37,7 @@ ENVIRONMENT = "production"
 # VITE_GA4_ID = "G-XXXXXXXXXX"        # Google Analytics 4 Measurement ID
 # VITE_CLARITY_ID = "xxxxxxxxxx"       # Microsoft Clarity Project ID
 # VITE_META_PIXEL_ID = "xxxxxxxxxxxxx" # Meta Pixel (Facebook) ID
+
+# Log e metriche del Worker (audit CFG-03)
+[observability]
+enabled = true
